@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<style>
+
+body {
+	margin: 0;
+}
+
+.tubens {
+	display: flex;
+}
+
+.tubens > div {
+	width: 1px;
+	height: 100vh;
+}
+
+</style>
+<body>
+<script>
+'use strict';
+
+class RubensTubens {
+	constructor(mediaStream) {
+		let audioContext = new AudioContext;
+		this.analyser = audioContext.createAnalyser();
+		this.analyser.fftSize = 2048;
+		this.data = new Uint8Array(this.analyser.fftSize);
+
+		this.el = document.createElement('div');
+		this.el.classList.add('tubens');
+		for (let i = 0; i < this.analyser.fftSize; i++)
+			this.el.appendChild(document.createElement('div'));
+
+		audioContext.createMediaStreamSource(mediaStream)
+			.connect(this.analyser);
+	}
+
+	start() {
+		if (this.animationFrame)
+			return;
+		let draw = (now) => {
+			this.draw(now);
+			this.animationFrame = requestAnimationFrame(draw);
+		};
+		this.animationFrame = requestAnimationFrame(draw);
+	}
+
+	draw(now) {
+		this.analyser.getByteTimeDomainData(this.data);
+		for (let i = 0; i < this.analyser.fftSize; i++)
+			this.el.children[i].style.backgroundColor = `rgba(0, 0, 0, ${this.data[i]/255})`;
+	}
+}
+
+let tubens;
+
+navigator.getUserMedia({audio: true}, stream => {
+	tubens = new RubensTubens(stream);
+	tubens.start();
+	document.body.appendChild(tubens.el);
+}, err => { alert(`o shit: ${err}`); });
+
+</script>

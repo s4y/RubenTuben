@@ -98,6 +98,7 @@ precision highp float;
 
 uniform float PI;
 uniform float time;
+uniform sampler2D soundtex;
 varying vec3 pos;
 varying vec3 apos;
 
@@ -113,11 +114,13 @@ void main(void) {
 				) - time * 10.0) / 2.0
 		;
 
+	brightness = texture2D(soundtex, vec2(pos.x / 2.0 + 0.5, 0.0))[0];
+
 	gl_FragColor = vec4(
 		mod(brightness, 1.0),
 		brightness,
 		brightness,
-		1.0
+		1.0// abs(0.5 - texture2D(soundtex, vec2(pos.x * 2048.0, 0))) * 2.0
 	);
 }
 
@@ -186,6 +189,16 @@ const pLoc = gl.getAttribLocation(program, 'p');
 gl.enableVertexAttribArray(pLoc);
 gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 0, 0);
 
+const soundTexLoc = gl.getAttribLocation(program, 'soundtex');
+var soundTexture = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, soundTexture);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
 function resize() {
 		canvasEl.width = canvasEl.clientWidth * devicePixelRatio;
 		canvasEl.height = canvasEl.clientHeight * devicePixelRatio;
@@ -202,9 +215,53 @@ function draw(now) {
 
 	gl.uniform1f(timeLoc, now / 1000);
 	gl.drawArrays(gl.TRIANGLES, 0, 36);
-	requestAnimationFrame(draw);
+	//requestAnimationFrame(draw);
 }
 
-requestAnimationFrame(draw);
+//requestAnimationFrame(draw);
+
+class RubensTubens {
+	constructor(mediaStream, texture) {
+		let audioContext = new AudioContext;
+		this.analyser = audioContext.createAnalyser();
+		this.analyser.fftSize = 2048;
+		this.data = new Uint8Array(this.analyser.fftSize);
+
+		this.el = document.createElement('div');
+		this.el.classList.add('tubens');
+		for (let i = 0; i < this.analyser.fftSize; i++)
+			this.el.appendChild(document.createElement('div'));
+
+		audioContext.createMediaStreamSource(mediaStream)
+			.connect(this.analyser);
+		this.texture = texture;
+	}
+
+	start() {
+		if (this.animationFrame)
+			return;
+		let draw = (now) => {
+			this.draw(now);
+			this.animationFrame = requestAnimationFrame(draw);
+		};
+		this.animationFrame = requestAnimationFrame(draw);
+	}
+
+	draw(now) {
+		this.analyser.getByteTimeDomainData(this.data);
+		gl.bindTexture(gl.TEXTURE_2D, this.texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.data.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.data);
+		gl.uniform1f(timeLoc, now / 1000);
+		gl.drawArrays(gl.TRIANGLES, 0, 36);
+	}
+}
+
+let tubens;
+
+navigator.getUserMedia({audio: true}, stream => {
+	tubens = new RubensTubens(stream, soundTexture);
+	tubens.start();
+	document.body.appendChild(tubens.el);
+}, err => { alert(`o shit: ${err}`); });
 
 </script>
