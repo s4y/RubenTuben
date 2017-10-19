@@ -26,11 +26,13 @@ body {
 	margin: 3em 0;
 }
 
-#videoEl {
+#mediaEl {
+	position: absolute;
+	bottom: 0;
 }
 
 </style>
-<!-- <audio id=mediaEl width=300 controls src="01 Endless Fantasy.mp3"></audio> -->
+<!-- <audio id=mediaEl width=300 controls src="06 - What Does Your Soul Look Like (Pt. 4).mp3"></audio> -->
 <!-- <video id=mediaEl width=300 controls src="The Rubens' Flame Tube - Seeing Sound Through Fire-pWekXMZJ2zM.mp4"></video> -->
 <div id=canvii></div>
 <script id="vShaderEl" type="x-shader">
@@ -178,7 +180,7 @@ window.addEventListener('resize', () => {
 
 function pumpNode(node) {
 	let analyser = audioContext.createAnalyser();
-	//analyser.fftSize = 4096;
+	analyser.fftSize = 4096;
 	node.connect(analyser);
 	const draw = now => {
 		const data = new Uint8Array(analyser.fftSize);
@@ -191,6 +193,7 @@ function pumpNode(node) {
 	requestAnimationFrame(draw);
 }
 
+/*
 // Tune the organ.
 pumpNode((() => {
 	let node = audioContext.createOscillator();
@@ -209,8 +212,8 @@ pumpNode((() => {
 	}
 	return node;
 })());
+*/
 
-/*
 navigator.getUserMedia({audio: true}, stream => {
 	let node = audioContext.createMediaStreamSource(stream);
  	let gainz = audioContext.createGain();
@@ -218,6 +221,14 @@ navigator.getUserMedia({audio: true}, stream => {
 	node.connect(gainz);
 	pumpNode(gainz);
 }, err => { alert(`o shit: ${err}`); });
+
+/*
+let node = audioContext.createMediaElementSource(mediaEl);
+let gainz = audioContext.createGain();
+gainz.gain.value = 2;
+node.connect(gainz);
+node.connect(audioContext.destination);
+pumpNode(gainz);
 */
 
 </script>
