@@ -156,7 +156,8 @@ class RubensTuben {
 	}
 }
 
-let audioContext = new AudioContext;
+// Safari 11 is still prefixed :/.
+let audioContext = new (window.AudioContext || webkitAudioContext);
 
 // "Concert C": http://guerillascience.org/fire-organ-sculpture/
 const tuning = 261.63
