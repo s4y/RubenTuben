@@ -11,116 +11,47 @@ body {
 }
 
 #canvasEl {
-	position: absolute;
-	top: 0;
-	left: 0;
+	display: block;
 	width: 100%;
 	height: 100%;
 }
 
+#videoEl {
+}
+
 </style>
+<!-- <video id=mediaEl width=300 controls src="The Rubens' Flame Tube - Seeing Sound Through Fire-pWekXMZJ2zM.mp4"></video> -->
 <canvas id=canvasEl></canvas>
 <script id="vShaderEl" type="x-shader">
 attribute vec3 p;
 
-uniform float PI;
 uniform float aspect;
 uniform float time;
+
 varying vec3 pos;
-varying vec3 apos;
-
-const mat3 kIdentityTransform = mat3(
-	1.0, 0.0, 0.0,
-	0.0, 1.0, 0.0,
-	0.0, 0.0, 1.0
-);
-
-mat3 scale(float x, float y, float z) {
-	return mat3(
-		x, 0.0, 0.0,
-		0.0, y, 0.0,
-		0.0, 0.0, z
-	);
-}
-
-mat3 rotX(float angle) {
-	return mat3(
-		1.0, 0.0, 0.0,
-		0.0, cos(angle), -sin(angle),
-		0.0, sin(angle), cos(angle)
-	);
-}
-
-mat3 rotY(float angle) {
-	return mat3(
-		cos(angle), 0.0, sin(angle),
-		0.0, 1.0, 0.0,
-		-sin(angle), 0.0, cos(angle)
-	);
-}
-
-mat3 rotZ(float angle) {
-	return mat3(
-		cos(angle), -sin(angle), 0.0,
-		sin(angle), cos(angle), 0.0,
-		0.0, 0.0, 1.0
-	);
-}
-
-mat4 perspectiveProj(float fov, float aspect, float near, float far) {
-	float f = 1.0 / tan(fov/2.0);
-	return mat4(
-		f / aspect, 0.0, 0.0, 0.0,
-		0.0, f, 0.0, 0.0,
-		0.0, 0.0, (far + near) / (far - near), 1.0,
-		0.0, 0.0, (2.0 * far * near) / (near - far), 0.0
-	);
-}
 
 void main() {
-	pos = rotX(PI/4.0) * rotZ(PI/4.0) * p;
-
-	mat3 transform = kIdentityTransform;
-	transform *= rotX(time);
-	transform *= rotZ(time);
-
-	apos = transform * p;
-	apos.z += 4.0;
-	vec4 tpos = perspectiveProj(
-		PI/3.0, aspect, 0.1, 10.0
-	) * vec4(apos, 1.0);
-	gl_Position = tpos;
+	gl_Position = vec4(p, 1.0);
+	pos = p;
 }
 
 </script>
 <script id="fShaderEl" type="x-shader">
 precision highp float;
 
-uniform float PI;
 uniform float time;
 uniform sampler2D soundtex;
+
 varying vec3 pos;
-varying vec3 apos;
 
 void main(void) {
-	float brightness = cos(time + pos.x * PI * 3.0 + PI) / 4.0
-				+ 0.5 + sin(2.0*PI*0.01*sqrt(
-						pow((1.0 - pos.x) * 1000.0, 2.0) +
-						pow((1.0 - pos.y) * 1000.0, 2.0)
-				) - time * 10.0) / 2.0
-				+ 0.5 + sin(2.0*PI*0.01*sqrt(
-						pow((pos.x - 1.0) * 1000.0, 2.0) +
-						pow(pos.y * 1000.0, 2.0)
-				) - time * 10.0) / 2.0
-		;
-
-	brightness = texture2D(soundtex, vec2(pos.x / 2.0 + 0.5, 0.0))[0];
+	float brightness = texture2D(soundtex, vec2(pos.x / 2.0 + 0.5, 0.0))[0];
 
 	gl_FragColor = vec4(
-		mod(brightness, 1.0),
 		brightness,
 		brightness,
-		1.0// abs(0.5 - texture2D(soundtex, vec2(pos.x * 2048.0, 0))) * 2.0
+		brightness,
+		1.0
 	);
 }
 
@@ -129,6 +60,7 @@ void main(void) {
 'use strict';
 
 const gl = canvasEl.getContext('webgl');
+
 
 gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
@@ -139,29 +71,10 @@ gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 const cubeVertices = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertices);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-	// Top
-	-1, 1, -1, 1, 1, -1, -1, 1, 1,
-	1, 1, 1, -1, 1, 1, 1, 1, -1,
-
-	// Bottom
-	-1, -1, -1, -1, -1, 1, 1, -1, -1,
-	1, -1, 1, 1, -1, -1, -1, -1, 1,
-
-	// Back
-	-1, -1, 1, -1, 1, 1, 1, -1, 1,
-	1, 1, 1, 1, -1, 1, -1, 1, 1,
-
-	// Left
-	-1, -1, 1, -1, -1, -1, -1, 1, 1,
-	-1, 1, -1, -1, 1, 1, -1, -1, -1,
-
-	// Right
-	1, -1, -1, 1, -1, 1, 1, 1, -1,
-	1, 1, 1, 1, 1, -1, 1, -1, 1,
-
-	// Front
-	-1, -1, -1, 1, -1, -1, -1, 1, -1,
-	1, 1, -1, -1, 1, -1, 1, -1, -1,
+	-1, 1, 0,
+	-1, -1, 0,
+	1, 1, 0,
+	1, -1, 0,
 ]), gl.STATIC_DRAW);
 
 const vShader = gl.createShader(gl.VERTEX_SHADER);
@@ -179,9 +92,6 @@ gl.linkProgram(program);
 
 gl.useProgram(program);
 
-const piLoc = gl.getUniformLocation(program, 'PI');
-gl.uniform1f(piLoc, Math.PI);
-
 const timeLoc = gl.getUniformLocation(program, 'time');
 const aspectLoc = gl.getUniformLocation(program, 'aspect');
 
@@ -192,48 +102,28 @@ gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 0, 0);
 const soundTexLoc = gl.getAttribLocation(program, 'soundtex');
 var soundTexture = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, soundTexture);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
 function resize() {
-		canvasEl.width = canvasEl.clientWidth * devicePixelRatio;
-		canvasEl.height = canvasEl.clientHeight * devicePixelRatio;
+	const clientRect = canvasEl.getBoundingClientRect();
+	canvasEl.width = clientRect.width * devicePixelRatio;
+	canvasEl.height = clientRect.height * devicePixelRatio;
 	gl.uniform1f(aspectLoc, gl.drawingBufferWidth / gl.drawingBufferHeight);
-		gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+	gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 }
 
 window.addEventListener('resize', resize);
 resize();
 
-function draw(now) {
-	// gl.clearColor(0.5, 0.5, 0.5, 1);
-	// gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-
-	gl.uniform1f(timeLoc, now / 1000);
-	gl.drawArrays(gl.TRIANGLES, 0, 36);
-	//requestAnimationFrame(draw);
-}
-
-//requestAnimationFrame(draw);
-
 class RubensTubens {
-	constructor(mediaStream, texture) {
+	constructor(analyser, texture) {
 		let audioContext = new AudioContext;
-		this.analyser = audioContext.createAnalyser();
-		this.analyser.fftSize = 2048;
-		this.data = new Uint8Array(this.analyser.fftSize);
-
-		this.el = document.createElement('div');
-		this.el.classList.add('tubens');
-		for (let i = 0; i < this.analyser.fftSize; i++)
-			this.el.appendChild(document.createElement('div'));
-
-		audioContext.createMediaStreamSource(mediaStream)
-			.connect(this.analyser);
+		this.analyser = analyser;
 		this.texture = texture;
 	}
 
@@ -248,20 +138,44 @@ class RubensTubens {
 	}
 
 	draw(now) {
-		this.analyser.getByteTimeDomainData(this.data);
+		const inData = new Uint8Array(this.analyser.fftSize);
+		this.analyser.getByteTimeDomainData(inData);
+
+		const outData = new Uint8Array(500);
+		const buf = Math.floor((inData.length - outData.length * 2) / 2);
+		let mid = Math.floor(inData.length / 2) + 0;
+		let min = 255;
+		for (let i = mid - buf; i <= mid + buf; i++) {
+			if (inData[i] < min) {
+				mid = i;
+				min = inData[i];
+			}
+		}
+		for (let i = 0; i < outData.length; i++) {
+			outData[i] = (inData[mid + i] / 2) + (inData[mid - i] / 2);
+		}
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, this.data.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.data);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, outData.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, outData);
 		gl.uniform1f(timeLoc, now / 1000);
-		gl.drawArrays(gl.TRIANGLES, 0, 36);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
 }
 
 let tubens;
 
-navigator.getUserMedia({audio: true}, stream => {
-	tubens = new RubensTubens(stream, soundTexture);
+//navigator.getUserMedia({audio: true}, stream => {
+	tubens = new RubensTubens((() => {
+		let audioContext = new AudioContext;
+		let analyser = audioContext.createAnalyser();
+		// let node = audioContext.createMediaElementSource(mediaEl);
+		let node = audioContext.createOscillator();
+		node.frequency.value = 292;
+		node.start();
+		//node.connect(audioContext.destination);
+		node.connect(analyser);
+		return analyser;
+	})(), soundTexture);
 	tubens.start();
-	document.body.appendChild(tubens.el);
-}, err => { alert(`o shit: ${err}`); });
+//}, err => { alert(`o shit: ${err}`); });
 
 </script>
