@@ -22,8 +22,8 @@ body {
 #canvii > canvas {
 	display: block;
 	flex: 0;
-	height: 10vh;
-	margin: 3em 0;
+	height: 7vh;
+	margin: 2vh 0;
 }
 
 #mediaEl {
@@ -145,7 +145,6 @@ class RubensTuben {
 				max = sum;
 			}
 		}
-		this.lmax = max;
 		for (let i = 0; i < outData.length; i++) {
 			outData[i] = (inData[i + ofs] / 2) + (inData[outData.length * 2 + ofs - i] / 2);
 		}
@@ -163,9 +162,9 @@ let audioContext = new AudioContext;
 const tuning = 261.63
 let tubens = [];
 
-for (let i = 5; i >= 3; i--) {
+for (let i = 7; i >= 3; i--) {
 	let canvas = document.createElement('canvas');
-	canvas.style.width = `${i*15}%`;
+	canvas.style.width = `${i*12}%`;
 	canvii.appendChild(canvas);
 	tubens.push(new RubensTuben(
 		canvas,
