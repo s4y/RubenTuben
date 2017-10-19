@@ -20,6 +20,7 @@ body {
 }
 
 </style>
+<!-- <audio id=mediaEl width=300 controls src="01 Endless Fantasy.mp3"></audio> -->
 <!-- <video id=mediaEl width=300 controls src="The Rubens' Flame Tube - Seeing Sound Through Fire-pWekXMZJ2zM.mp4"></video> -->
 <canvas id=canvasEl></canvas>
 <script id="vShaderEl" type="x-shader">
@@ -141,18 +142,20 @@ class RubensTubens {
 		const inData = new Uint8Array(this.analyser.fftSize);
 		this.analyser.getByteTimeDomainData(inData);
 
-		const outData = new Uint8Array(500);
-		const buf = Math.floor((inData.length - outData.length * 2) / 2);
-		let mid = Math.floor(inData.length / 2) + 0;
-		let min = 255;
-		for (let i = mid - buf; i <= mid + buf; i++) {
-			if (inData[i] < min) {
-				mid = i;
-				min = inData[i];
+		const outData = new Uint8Array(674);
+		let ofs = inData.length - outData.length * 2;
+		let min = -1;
+		for (let i = ofs - 5; i >= 5; i--) {
+			let sum = 0;
+			for (let j = -5; j <= 5; j++)
+				sum += inData[i + j];
+			if (min < 0 || sum < min) {
+				ofs = i;
+				min = sum;
 			}
 		}
 		for (let i = 0; i < outData.length; i++) {
-			outData[i] = (inData[mid + i] / 2) + (inData[mid - i] / 2);
+			outData[i] = (inData[i + ofs] / 2) + (inData[outData.length * 2 + ofs - i] / 2);
 		}
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, outData.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, outData);
@@ -162,20 +165,39 @@ class RubensTubens {
 }
 
 let tubens;
+let ac;
 
-//navigator.getUserMedia({audio: true}, stream => {
+// navigator.getUserMedia({audio: true}, stream => {
 	tubens = new RubensTubens((() => {
 		let audioContext = new AudioContext;
+		ac = audioContext;
 		let analyser = audioContext.createAnalyser();
+		//analyser.fftSize = 4096;
+		// let node = audioContext.createMediaStreamSource(stream);
 		// let node = audioContext.createMediaElementSource(mediaEl);
 		let node = audioContext.createOscillator();
-		node.frequency.value = 292;
+		node.frequency.value = 261.63;
+		// {
+		// 	let rising = true;
+		// 	setInterval(() => {
+		// 		node.frequency.value *= rising ? 1.001 : 0.999;
+		// 		if (node.frequency.value > 5000)
+		// 			rising = false;
+		// 		else if (node.frequency.value < 100)
+		// 			rising = true;
+		// 	}, 16);
+		// }
 		node.start();
-		//node.connect(audioContext.destination);
+
+		// let gainz = audioContext.createGain();
+		// gainz.gain.value = 4;
+		// node.connect(audioContext.destination);
 		node.connect(analyser);
+		// node.connect(gainz);
+		// gainz.connect(analyser);
 		return analyser;
 	})(), soundTexture);
 	tubens.start();
-//}, err => { alert(`o shit: ${err}`); });
+// }, err => { alert(`o shit: ${err}`); });
 
 </script>
