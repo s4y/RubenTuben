@@ -19,11 +19,22 @@ body {
 	background: black;
 }
 
-#canvii > canvas {
-	display: block;
+#canvii > div {
 	flex: 0;
+	position: relative;
+	margin: 4vh 0;
 	height: 7vh;
-	margin: 2vh 0;
+}
+
+#canvii > div > canvas {
+	display: block;
+	height: 100%;
+	width: 100%;
+}
+
+#canvii canvas.flamen {
+	position: absolute;
+	bottom: 80%;
 }
 
 #mediaEl {
@@ -69,11 +80,29 @@ void main(void) {
 }
 
 </script>
+<script id="flameShaderEl" type="x-shader">
+precision highp float;
+
+uniform float time;
+uniform sampler2D soundtex;
+
+varying vec3 pos;
+
+void main(void) {
+	float br = 0.0;
+	gl_FragColor = vec4(
+		1.0,
+		0.0,
+		0.0,
+		br
+	);
+}
+</script>
 <script>
 'use strict';
 
-class RubensTuben {
-	constructor(canvas, length) {
+class TubenCanvas {
+	constructor(canvas, fShaderEl) {
 		const gl = canvas.getContext('webgl');
 
 		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -118,7 +147,6 @@ class RubensTuben {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 		this.canvas = canvas;
-		this.length = length;
 		this.gl = gl;
 		this.soundTexture = soundTexture;
 		this.wasResized();
@@ -130,6 +158,21 @@ class RubensTuben {
 		this.canvas.height = clientRect.height * devicePixelRatio;
 		this.gl.uniform1f(this.aspectLoc, this.gl.drawingBufferWidth / this.gl.drawingBufferHeight);
 		this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
+	}
+
+	draw(data, now) {
+		const gl = this.gl;
+		gl.bindTexture(gl.TEXTURE_2D, this.soundTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, data.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, data);
+		gl.uniform1f(this.timeLoc, now / 1000);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	}
+}
+
+class FlamenTuben {
+	constructor(canvas, length) {
+		this.canvas = new TubenCanvas(canvas, flameShaderEl);
+		this.length = length;
 	}
 
 	pump(inData, now) {
@@ -148,11 +191,33 @@ class RubensTuben {
 		for (let i = 0; i < outData.length; i++) {
 			outData[i] = (inData[i + ofs] / 2) + (inData[outData.length * 2 + ofs - i] / 2);
 		}
-		const gl = this.gl;
-		gl.bindTexture(gl.TEXTURE_2D, this.soundTexture);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, outData.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, outData);
-		gl.uniform1f(this.timeLoc, now / 1000);
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		this.canvas.draw(outData, now);
+	}
+}
+
+class RubensTuben {
+	constructor(canvas, length) {
+		this.canvas = new TubenCanvas(canvas, fShaderEl);
+		this.length = length;
+	}
+
+	pump(inData, now) {
+		const outData = new Uint8Array(this.length);
+		let ofs = inData.length - 1 - outData.length * 2;
+		let max = 0;
+		for (let i = ofs - 5; i >= 5; i--) {
+			let sum = 0;
+			for (let j = -5; j <= 5; j++)
+				sum += inData[i + j];
+			if (sum > max) {
+				ofs = i;
+				max = sum;
+			}
+		}
+		for (let i = 0; i < outData.length; i++) {
+			outData[i] = (inData[i + ofs] / 2) + (inData[outData.length * 2 + ofs - i] / 2);
+		}
+		this.canvas.draw(outData, now);
 	}
 }
 
@@ -164,18 +229,24 @@ const tuning = 261.63
 let tubens = [];
 
 for (let i = 7; i >= 3; i--) {
-	let canvas = document.createElement('canvas');
-	canvas.style.width = `${i*12}%`;
-	canvii.appendChild(canvas);
-	tubens.push(new RubensTuben(
-		canvas,
-		Math.round(audioContext.sampleRate / tuning * i)
-	));
+	const length = Math.round(audioContext.sampleRate / tuning * i);
+	const tubenEl = document.createElement('div');
+	const tubeCanvas = document.createElement('canvas');
+	const flameCanvas = document.createElement('canvas');
+
+	tubenEl.style.width = `${i*12}%`;
+	flameCanvas.classList.add('flamen');
+	tubenEl.appendChild(tubeCanvas);
+	tubenEl.appendChild(flameCanvas);
+	canvii.appendChild(tubenEl);
+
+	tubens.push(new RubensTuben(tubeCanvas, length));
+	tubens.push(new FlamenTuben(flameCanvas, length));
 }
 
 window.addEventListener('resize', () => {
 	for (const tuben of tubens)
-		tuben.wasResized();
+		tuben.canvas.wasResized();
 });
 
 function pumpNode(node) {
