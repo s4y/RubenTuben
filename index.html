@@ -320,7 +320,10 @@ pumpNode((() => {
 })());
 */
 
-navigator.getUserMedia({audio: true}, stream => {
+navigator.mediaDevices.getUserMedia({audio: {
+  echoCancellation: false,
+  noiseSuppression: false,
+}}).then(stream => {
 	let node = audioContext.createMediaStreamSource(stream);
  	let gainz = audioContext.createGain();
  	gainz.gain.value = 4;
