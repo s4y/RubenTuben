@@ -42,10 +42,31 @@ body {
 	bottom: 0;
 }
 
+#enableAudioContext {
+  display: block;
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
+  font: inherit;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  outline: none;
+  font-size: 2em;
+  padding: 1em 1.5em;
+}
+
+#enableAudioContext:not(.visible) {
+  display: none;
+}
+
 </style>
 <!-- <audio id=mediaEl width=300 controls src="06 - What Does Your Soul Look Like (Pt. 4).mp3"></audio> -->
 <!-- <video id=mediaEl width=300 controls src="The Rubens' Flame Tube - Seeing Sound Through Fire-pWekXMZJ2zM.mp4"></video> -->
 <div id=canvii></div>
+<button id=enableAudioContext>Click to start, please.</button>
 <script id="vShaderEl" type="x-shader">
 attribute vec3 p;
 
@@ -223,6 +244,18 @@ class RubensTuben {
 
 // Safari 11 is still prefixed :/.
 let audioContext = new (window.AudioContext || webkitAudioContext);
+
+if (audioContext.state != 'running') {
+  audioContext.addEventListener('statechange', e => {
+    enableAudioContext.classList.remove('visible');
+  }, { once: true});
+
+  enableAudioContext.addEventListener('click', e => {
+    audioContext.resume();
+  }, { once: true });
+
+  enableAudioContext.classList.add('visible');
+}
 
 // "Concert C": http://guerillascience.org/fire-organ-sculpture/
 const tuning = 261.63
