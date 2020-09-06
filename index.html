@@ -268,11 +268,11 @@ for (let i = 7; i >= 3; i--) {
 	tubenEl.style.width = `${i*12}%`;
 	flameCanvas.classList.add('flamen');
 	tubenEl.appendChild(tubeCanvas);
-	tubenEl.appendChild(flameCanvas);
+	// tubenEl.appendChild(flameCanvas);
 	canvii.appendChild(tubenEl);
 
 	tubens.push(new RubensTuben(tubeCanvas, length));
-	tubens.push(new FlamenTuben(flameCanvas, length));
+	// tubens.push(new FlamenTuben(flameCanvas, length));
 }
 
 window.addEventListener('resize', () => {
